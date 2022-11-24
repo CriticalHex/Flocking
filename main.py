@@ -7,7 +7,7 @@ def main():
     running = True
     clock = pygame.time.Clock()
 
-    count = 3
+    count = 200
     flock = Flock(count)
 
     while running:

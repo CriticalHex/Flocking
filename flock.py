@@ -24,12 +24,12 @@ class Flock:
             pygame.draw.circle(self.flock.screen, (255, 255, 0), self.pos, 8)
 
         def update(self):
-            self.wrap()
             self.pos += self.vel
             self.vel += self.acc
             if self.vel.magnitude != 0:
                 self.vel *= self.flock.max_speed / self.vel.magnitude()
             self.acc *= 0
+            self.wrap()
 
         def wrap(self):
             if self.pos.x > self.flock.screen.get_width():
@@ -44,11 +44,14 @@ class Flock:
 
     def __init__(self, count) -> None:
         self.screen = pygame.display.get_surface()
-        self.perception = 500
+        self.perception = 50
         self.boids: list[Flock.Boid] = []
         self.count = count
         self.max_speed = 4
         self.max_steer = 1
+        self.max_alignment = 1
+        self.max_cohesion = 1
+        self.max_separation = 1
         for _ in range(self.count):
             self.boids.append(Flock.Boid(self))
 
@@ -59,15 +62,14 @@ class Flock:
             b.draw()
 
     def update(self):
-        current_boids = self.boids.copy()
 
-        alignment = vec(0, 0)
-        separation = vec(0, 0)
-        cohesion = vec(0, 0)
-        total = 0
+        for b in self.boids:
+            alignment = vec(0, 0)
+            separation = vec(0, 0)
+            cohesion = vec(0, 0)
+            total = 0
 
-        for b in current_boids:
-            for other in current_boids:
+            for other in self.boids:
                 if other is not b:
                     d = dist(b.pos, other.pos)
                     if d < self.perception:  # if flocking
@@ -80,9 +82,9 @@ class Flock:
                 cohesion = self.cohese(cohesion, total, b)
                 separation = self.handle(separation, total, b)
 
-            # b.acc += alignment
-            b.acc += cohesion
-            # b.acc += separation
+            b.acc += alignment * self.max_alignment
+            b.acc += cohesion * self.max_cohesion
+            b.acc += separation * self.max_separation
 
     def calc_separation(self, boid: Boid, other: Boid, distance: float):
         diff = boid.pos - other.pos  # vector from other to b
@@ -92,16 +94,22 @@ class Flock:
 
     def handle(self, steer: vec, total: int, boid: Boid):
         steer /= total  # average
+        if steer.magnitude() != 0:
+            steer *= self.max_speed / steer.magnitude()  # max the speed
+        steer -= boid.vel  # calculate the steer
         if (x := steer.magnitude()) > self.max_steer:
             steer *= self.max_steer / x  # limit
+        return steer
+
+        steer /= total  # average
+        if (x := steer.magnitude()) > self.max_separation:
+            steer *= self.max_separation / x  # limit
         steer -= boid.vel  # calculate the steer
         return steer
 
-    def cohese(self, tot_pos: vec, total: int, boid: Boid):
-        pygame.draw.circle(self.screen, (0, 255, 0), tot_pos, 5)
-        avg_pos = tot_pos / total  # average
-        pygame.draw.circle(self.screen, (255, 0, 0), avg_pos, 5)
-        steer = avg_pos - boid.pos  # calculate the pos vec
+    def cohese(self, steer: vec, total: int, boid: Boid):
+        steer /= total  # average
+        steer -= boid.pos  # calculate the pos vec
         if steer.magnitude() != 0:
             steer *= self.max_speed / steer.magnitude()  # max the speed
         steer -= boid.vel  # calculate the steer
