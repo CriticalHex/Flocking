@@ -1,6 +1,7 @@
 import pygame
 from random import randint, random
 from math import dist
+from colors import Color
 
 vec = pygame.Vector2
 rec = pygame.Rect
@@ -10,6 +11,7 @@ class Flock:
     class Boid:
         def __init__(self, flock):
             self.flock: Flock = flock
+            self.color = Color()
             self.pos = vec(
                 randint(0, self.flock.screen.get_width()),
                 randint(0, self.flock.screen.get_height()),
@@ -21,7 +23,8 @@ class Flock:
             self.acc = vec(0, 0)
 
         def draw(self):
-            pygame.draw.circle(self.flock.screen, (255, 255, 0), self.pos, 8)
+            pygame.draw.circle(self.flock.screen, self.color.get_color(), self.pos, 8)
+            self.color.inc()
 
         def update(self):
             self.pos += self.vel
